@@ -1,0 +1,157 @@
+# Kseniya Husak
+
+
+# imports we will use
+import altair as alt
+import pandas as pd
+import streamlit as st
+
+st.title('Taking a Closer Look at Norwegian Olympic Athletes')
+
+st.header('Almost all Norwegian Athletes Compete in multiple individual events and ralies')
+
+st.header('')
+
+st.write('In this visualization, you can explore how many medals each athlete won in a given winter sport as well as in how many events Norwegians participated for any winter sport respectively. By clicking on individual bubble you can see in which exact sport events any given athlete won medals.')
+
+st.header('')
+
+#Import data
+by_athlete_to_20=pd.read_csv("processed.csv")
+
+# getting list 
+years = by_athlete_to_20['Year'].to_list()
+myset = set(years)
+my_list = sorted(list(myset))
+
+selector = alt.selection_single(empty='all', fields=['Athlete'])
+
+
+
+#####################################################
+###############First Viz#############################
+# this is for all years 
+base = alt.Chart(by_athlete_to_20).properties(
+    width=200,
+    height=500
+).add_selection(selector)
+
+
+
+points = base.mark_point(filled=True, size=200).encode(
+    y=alt.Y('Athlete:N',title=None,axis=alt.Axis(ticks=False,labelColor='#2a2725', labelFont='Garamond')),
+    x=alt.X('sum(Code)',axis=alt.Axis(tickMinStep=1.00, 
+                                      ticks=False,
+                                      title='Medals',
+                                      titleColor='#2a2725',
+                                      titleFont='Garamond',
+                                      titleFontWeight='normal')),
+    color=alt.condition(selector, 'Sport:N', alt.value('lightgray'),scale=alt.Scale(scheme='category20b')),
+    tooltip = ['Sport:N']
+).properties(
+    title='Medals by Sport'
+)
+
+timeseries = base.mark_bar(font='Garamond').encode(
+    y=alt.Y('Event:N', title=None, axis=alt.Axis(ticks=False,
+                                                 labelColor='#2a2725', 
+                                                 labelFont='Garamond')),
+    x=alt.X('count(Event):N',axis=alt.Axis(tickMinStep=1.00,
+                                           title='Medals',
+                                           ticks=False,
+                                           titleColor='#2a2725',
+                                           titleFont='Garamond',
+                                          titleFontWeight='normal')),
+    color=alt.Color('Sport:N', legend=None),
+    tooltip = ['Sport:N','Athlete:N']
+).transform_filter(
+    selector
+).properties(
+    title='Medals by Event'
+)
+
+
+
+ # filter to only keep things that have been selected 
+
+norway_overall = (points | timeseries).configure_axis(grid=False).configure_title(
+    align='left',
+    fontSize=20, 
+    font='Garamond', 
+    dy=-20,
+    color='#282828', 
+    fontWeight=600
+).configure_mark(opacity=0.8).configure_view(strokeWidth=0).configure_legend(orient='bottom',
+direction='vertical')
+
+
+
+
+norway_overall
+
+
+st.write('In this visualization, you can filter by year to see how many medals were won by each athlete as well as how many events any given athlete participated in by sport. As in previous visualization, you can click on bubbles to see results just for an athlete you are interested in. You can also hover your mouse directy over chart elements to see individual labels.')
+
+st.header('')
+###########################################
+###########Viz2###########################
+
+
+# this is to peruse by year
+
+widget = alt.binding_select(options=my_list,name="Select year: ")#0
+selectYear =alt.selection_single(fields=['Year'],init={"Year":my_list[0]},bind=widget)
+color = alt.condition(selectYear,
+                    alt.Color('Year:N', legend=None),
+                    alt.value('lightgray'))
+
+
+base = alt.Chart(by_athlete_to_20
+).add_selection(selector, selectYear).transform_filter(selectYear)
+
+
+
+points = base.mark_point(filled=True, size=150).encode(
+    y=alt.Y('Athlete:N',title=None, axis=alt.Axis(ticks=False,labelColor='#2a2725', labelFont='Garamond')),
+    x=alt.X('sum(Code)',axis=alt.Axis(tickMinStep=1.00,
+                                      title='Medals',
+                                      ticks=False,
+                                      labelColor='#828282',
+                                      titleFont='Garamond',
+                                      titleFontWeight='normal'),
+           scale=alt.Scale(domain=(0, 5))),
+    color=alt.condition(selector, 'Sport:N', alt.value('lightgray'),scale=alt.Scale(scheme='category20b')),
+    tooltip = ['Sport:N']
+).properties(title='Medals by Athlete', width=300)
+
+
+
+timeseries = base.mark_bar().encode(
+    y=alt.Y('Athlete:N',title=None, axis=alt.Axis(labels=False, ticks=False, labelColor='#828282')),
+    x=alt.X('count(Event):N',axis=alt.Axis(tickMinStep=1.00, 
+    ticks=False,
+    labelColor='#828282',
+    title='Events',
+    titleFontWeight='normal',
+    titleFont='Garramond'),
+    scale=alt.Scale(domain=(0, 5))),
+    color=alt.Color('Event:N', scale=alt.Scale(scheme='warmgreys')),
+    tooltip = ['Event:N']
+).transform_filter(selector
+).properties(title='Events by Athlete', width=300)
+
+ # filter to only keep things that have been selected 
+    
+
+norway_by_year = (points | timeseries).configure_axis(grid=False).configure_title(
+    align='left',
+    fontSize=19, 
+    font='Garamond', 
+    dy=-14, 
+    color='#282828',
+    fontWeight=600
+).configure_view(strokeWidth=0).resolve_scale(color='independent',y='shared').configure_legend(
+  orient='bottom',direction ='vertical'
+)
+                                                                                
+norway_by_year
